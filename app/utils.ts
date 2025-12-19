@@ -77,19 +77,27 @@ export async function downloadAs(text: string, filename: string) {
       showToast(Locale.Download.Failed);
     }
   } else {
+    // ========== 核心修复开始：使用 Blob URL 替代 Data URL ==========
+    // 创建带有明确UTF-8编码声明的Blob对象
+    const blob = new Blob([text], {
+      type: 'text/plain;charset=utf-8',
+    });
+    // 生成一个安全的Blob URL（无长度限制，避免编码损坏）
+    const blobUrl = URL.createObjectURL(blob);
+
     const element = document.createElement("a");
-    element.setAttribute(
-      "href",
-      "data:text/plain;charset=utf-8," + encodeURIComponent(text),
-    );
+    // 关键修改：href 指向 Blob URL，而非超长的 Data URL 字符串
+    element.href = blobUrl;
     element.setAttribute("download", filename);
 
     element.style.display = "none";
     document.body.appendChild(element);
-
     element.click();
 
+    // 清理DOM并释放URL对象（避免内存泄漏）
     document.body.removeChild(element);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    // ========== 核心修复结束 ==========
   }
 }
 
